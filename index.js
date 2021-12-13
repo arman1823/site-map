@@ -1,0 +1,58 @@
+const https = require('https');
+const startUrl = "https://hexact.io/";
+const foundedLinks = [];
+const statusObj = {};
+let counter = 0;
+
+const load = (myUrl,cb) => {
+	https.get(myUrl,  res => {
+		let data = '';
+		res.on('data', chunk => {
+			data += chunk;
+		});
+		res.on('end', () => {
+			cb(myUrl,res.statusCode,data);
+		})
+	}).on('error', err => {
+		console.log(err.message,myUrl);
+	})
+};
+
+const format = (url,statusCode,data) => {
+	counter++
+	if (statusCode >= 200 && statusCode < 300) {
+		linkFinder(data).forEach((link)=>{
+			if(foundedLinks.indexOf(link) == -1){
+				foundedLinks.push(link)
+				load(link,format);
+			}
+		})
+	}
+
+	if(statusObj.hasOwnProperty(statusCode)){
+		statusObj[statusCode].push(url)
+	}else{
+		statusObj[statusCode] = [url]
+	}
+	console.log(statusCode,url);
+	if(foundedLinks.length == counter-1) {
+		for(let code in statusObj){
+			console.log(code, statusObj[code].length)
+		}
+	}
+}
+const linkFinder = (data) => {
+		const root = "https://hexact.io/";
+		const re = /href="([^\'\"]+)/g;
+		let qurl;
+		if(data.match(re)) {return data.match(re).map((el)=>{
+				let link = el.split('"')[1];
+				let linkFormat = el.split('"')[1].split(".")[1];
+				qurl = root+link;
+				// if(linkFormat == "html" )
+				// console.log(qurl);
+				return qurl;
+			}).filter(un => un !== undefined);
+		}else{ return []}
+};
+load(startUrl,format);
