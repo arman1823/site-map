@@ -1,5 +1,6 @@
-const https = require('https');
-const startUrl = "https://hexact.io/";
+import https from "https";
+
+const startUrl = new URL("https://hexact.io/");
 const foundedLinks = [];
 const statusObj = {};
 let counter = 0;
@@ -21,7 +22,7 @@ const load = (myUrl,cb) => {
 const format = (url,statusCode,data) => {
 	counter++
 	if (statusCode >= 200 && statusCode < 300) {
-		linkFinder(data).forEach((link)=>{
+		linkFinder(data,url).forEach((link)=>{
 			if(foundedLinks.indexOf(link) == -1){
 				foundedLinks.push(link)
 				load(link,format);
@@ -41,17 +42,25 @@ const format = (url,statusCode,data) => {
 		}
 	}
 }
-const linkFinder = (data) => {
-		const root = "https://hexact.io/";
-		const re = /href="([^\'\"]+)/g;
+const linkFinder = (data,url) => {
+		const root = new URL(url).origin;
+		const pattern = /href="([^\'\"]+)/g;
 		let qurl;
-		if(data.match(re)) {return data.match(re).map((el)=>{
-				let link = el.split('"')[1];
-				let linkFormat = el.split('"')[1].split(".")[1];
-				qurl = root+link;
-				// if(linkFormat == "html" )
-				// console.log(qurl);
-				return qurl;
+		if(data.match(pattern)) {
+			return data.match(pattern).map((el)=>{
+				let href = el.split('"')[1];
+				if(!(
+					href.includes("@")||
+					href.includes("#")||
+					href.includes("http")||
+					href.includes(".css")||
+					href.includes(".svg")||
+					href.includes(".png")
+				)){
+					if(href.indexOf("/") ) href = "/"+href ;
+					qurl = root+href;
+					return qurl;
+				}
 			}).filter(un => un !== undefined);
 		}else{ return []}
 };
